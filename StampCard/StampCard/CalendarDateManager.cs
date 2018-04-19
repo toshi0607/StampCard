@@ -16,7 +16,7 @@ namespace StampCard
         IMobileServiceTable<CalendarDate> calendarDateTable;
         private CalendarDateManager()
         {
-            this.client = new MobileServiceClient(Constants.ApplicationURL);
+            this.client = new MobileServiceClient(Variables.StampCardURL);
 
             this.calendarDateTable = client.GetTable<CalendarDate>();
         }

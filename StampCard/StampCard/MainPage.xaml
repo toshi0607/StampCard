@@ -5,6 +5,25 @@
              xmlns:local="clr-namespace:StampCard"
              x:Class="StampCard.MainPage">
 
-    <SfCal:SfCalendar x:Name="calendar" OnCalendarTapped="Handle_OnCalendarTapped" />
+    <StackLayout>
+        <Grid VerticalOptions="EndAndExpand">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="lastMonthButton" Text="前月へ" Grid.Column="0" Clicked="OnLastMonthButtonClicked" />
+            <Button x:Name="refreshButton" Text="更新" Grid.Column="1" Clicked="OnRefreshButtonClicked" />
+            <Button x:Name="nextMonthButton" Text="次月へ" Grid.Column="2" Clicked="OnNextMonthButtonClicked" />
+        </Grid>
+        
+        <SfCal:SfCalendar
+           x:Name="calendar"
+           ShowYearView="false"
+           OnCalendarTapped="Handle_OnCalendarTapped"
+           MonthChanged="Handle_MonthChanged"
+        />
+        <ActivityIndicator x:Name="indicator" />
+    </StackLayout>
+    
 
 </ContentPage>

@@ -6,30 +6,40 @@ using System.Text;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 using Microsoft.WindowsAzure.MobileServices;
+using System.Net.Http;
+using System.Windows.Input;
+using System.Diagnostics;
 
 namespace StampCard
 {
     public partial class MainPage : ContentPage
     {
         private CalendarEventCollection calendarEventCollection = new CalendarEventCollection();
-        CalendarDateManager manager;
+        CalendarDateManager cDateManager;
+        private static HttpClient client = new HttpClient();
 
         public MainPage()
         {
             InitializeComponent();
-            calendar.Locale = new System.Globalization.CultureInfo("ja-JP");
+            cDateManager = CalendarDateManager.DefaultManager;
 
-            this.calendar.DataSource = calendarEventCollection;
-            //this.UpdateEvents(DateTime.Today);
+            calendar.Locale = new System.Globalization.CultureInfo("ja-JP");
+            calendar.DataSource = calendarEventCollection;
         }
 
         protected async override void OnAppearing()
         {
             base.OnAppearing();
+            await RefreshCarendarAsync(DateTime.Today);
+        }
+
+        async Task RefreshCarendarAsync(DateTime dt)
+        {
+            IsRequesting(true);
+
             CalendarEventCollection newCalendarEventCollection = new CalendarEventCollection();
 
-            manager = CalendarDateManager.DefaultManager;
-            var calendarDates = await manager.GetCalendarDatesAsync(DateTime.Today);
+            var calendarDates = await cDateManager.GetCalendarDatesAsync(dt);
             foreach (var cd in calendarDates)
             {
                 newCalendarEventCollection.Add(
@@ -37,19 +47,28 @@ namespace StampCard
                     {
                         StartTime = cd.StampAt,
                         EndTime = cd.StampAt,
-                        Color = colorByTypeColor(cd.Type),
+                        Color = ColorByTypeColor(cd.Type),
                     });
             }
 
             // 形だけでも待たないと落ちる
             await Task.Delay(10);
-            // こう書きたいけどUI更新されない
+
             calendarEventCollection = newCalendarEventCollection;
-            this.calendar.DataSource = calendarEventCollection;
-            //this.calendar.DataSource = newCalendarEventCollection;
+            calendar.DataSource = newCalendarEventCollection;
+
+            IsRequesting(false);
         }
 
-        Color colorByTypeColor(CalendarDate.Status type)
+        void IsRequesting(bool flag)
+        {
+            lastMonthButton.IsEnabled = !flag;
+            refreshButton.IsEnabled = !flag;
+            nextMonthButton.IsEnabled = !flag;
+            indicator.IsRunning = flag;
+        }
+
+        Color ColorByTypeColor(CalendarDate.Status type)
         {
             switch (type)
             {
@@ -76,7 +95,7 @@ namespace StampCard
                         EndTime = dt,
                         Color = Color.Yellow
                     });
-                this.calendar.DataSource = calendarEventCollection;
+                calendar.DataSource = calendarEventCollection;
             }
             else
             {
@@ -84,7 +103,7 @@ namespace StampCard
             }
         }
 
-        public async void Handle_OnCalendarTapped(object snder, EventArgs e)
+        async void Handle_OnCalendarTapped(object snder, EventArgs e)
         {
             var ev = ((CalendarTappedEventArgs)e);
             var cev = calendarEventCollection.Where(ce => ce.StartTime.Year == ev.datetime.Year &&
@@ -100,9 +119,48 @@ namespace StampCard
                     StampAt = ev.datetime,
                     Type = CalendarDate.Status.Reviewing,
                 };
-                await this.manager.SaveCalendarDateAsync(cDate);
+                try
+                {
+                    IsRequesting(true);
+                    await cDateManager.SaveCalendarDateAsync(cDate);
+                    await SendApprovalRequest(cDate);
+                    IsRequesting(false);
+                }
+                catch (Exception ex)
+                {
+                    Debug.Write(ex);
+                }
+                
                 UpdateEvents(((CalendarTappedEventArgs)e).datetime);
             }
+        }
+
+        async Task<string> SendApprovalRequest(CalendarDate cDate)
+        {
+            var payload = $"{{\"calendarDate\":\"{cDate.StampAt.ToString()}\"}}";
+            var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync(Variables.ApprovalRequestURL, content);
+            return await response.Content.ReadAsStringAsync();
+        }
+
+        async void OnRefreshButtonClicked(object snder, EventArgs e)
+        {
+            await RefreshCarendarAsync(calendar.DisplayDate);
+        }
+
+        void OnNextMonthButtonClicked(object snder, EventArgs e)
+        {
+            DependencyService.Get<ICalendarDirection>().Forward();
+        }
+
+        void OnLastMonthButtonClicked(object snder, EventArgs e)
+        {
+            DependencyService.Get<ICalendarDirection>().Backward();
+        }
+
+        async void Handle_MonthChanged(object snder, EventArgs e)
+        {
+            await RefreshCarendarAsync(calendar.DisplayDate);
         }
     }
 }
