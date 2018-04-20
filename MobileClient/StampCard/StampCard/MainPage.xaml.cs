@@ -86,6 +86,8 @@ namespace StampCard
         {
             DateTime dt = new DateTime(calendarDate.Year, calendarDate.Month, calendarDate.Day);
             var ev = calendarEventCollection.Where(e => e.StartTime == dt && e.EndTime == dt);
+            // UpdateEventsは承認リクエスト以降に呼び出されないという実装に依存しているので、
+            // 既に何らかの承認ステータスであることを想定しない
             if (ev.Count() == 0)
             {
                 calendarEventCollection.Add(
@@ -108,6 +110,7 @@ namespace StampCard
             var ev = ((CalendarTappedEventArgs)e);
             var cev = calendarEventCollection.Where(ce => ce.StartTime.Year == ev.datetime.Year &&
                 ce.StartTime.Month == ev.datetime.Month && ce.StartTime.Day == ev.datetime.Day).SingleOrDefault();
+            // スタンプの申請中、承認、却下状態であればクリックを無視する
             if (cev?.Color != null)
                 return;
 
@@ -122,6 +125,8 @@ namespace StampCard
                 try
                 {
                     IsRequesting(true);
+                    // カレンダー日付をRequestingに更新するのに成功し、
+                    // 承認リクエストメールの送信に失敗したら永久にRequestingのままな実装
                     await cDateManager.SaveCalendarDateAsync(cDate);
                     await SendApprovalRequest(cDate);
                     IsRequesting(false);

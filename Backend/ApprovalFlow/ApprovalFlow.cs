@@ -99,7 +99,7 @@ namespace ApprovalFlow
             var approveURL = ConfigurationManager.AppSettings.Get("APPROVE_URL");
 
             // 承認者のメール。サンプルなので固定にしているが、承認者情報をDBに保存してそれを取得するべき
-            var email = ConfigurationManager.AppSettings.Get("AUTHORIZER_EMAIL");
+            var email = ConfigurationManager.AppSettings.Get("APPROVER_EMAIL");
             var message = new Mail
             {
                 Subject = $"{approvalRequest.CalendarDate.ToString("yyyy/MM/dd")}のスタンプリクエスト"
