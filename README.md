@@ -10,7 +10,14 @@ Xamarin.Forms
 ## バックエンド
 Durable Fuctions
 
+## シーケンス図
 ![シーケンス図](./image/seequence.png)
+
+## アプリ
+![アプリ](./image/app.png)
+
+## スタンプリクエストメール
+![メール](./image/mail.png)
 
 # LT資料
 https://speakerdeck.com/toshi0607/serverless-mobile-backend-using-durable-functions-for-approval-flow
