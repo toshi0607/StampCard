@@ -17,7 +17,7 @@ Durable Fuctions
 ![アプリ](./image/app.png)
 
 ## スタンプリクエストメール
-![メール](./image/mail.png)
+![メール](./image/mail-m.png)
 
 # LT資料
 https://speakerdeck.com/toshi0607/serverless-mobile-backend-using-durable-functions-for-approval-flow
