@@ -18,8 +18,34 @@ using SendGrid.Helpers;
 
 namespace ApprovalFlow
 {
+    public static class HttpStart
+    {
+        // モバイルクライアントからの承認リクエストを受け、Orchestratorを起動するためのOrchestrationClient関数
+        [FunctionName("HttpStart")]
+        public static async Task<HttpResponseMessage> Run(
+            [HttpTrigger(AuthorizationLevel.Function, methods: "post", Route = "orchestrators/{functionName}")] HttpRequestMessage req,
+            [OrchestrationClient] DurableOrchestrationClient starter,
+            string functionName,
+            TraceWriter log)
+        {
+            log.Info($"starter: {req}");
+            dynamic eventData = await req.Content.ReadAsAsync<object>();
+            log.Info($"starter:  eventData {eventData}");
+            string instanceId = await starter.StartNewAsync(functionName, eventData);
+
+            log.Info($"Started orchestration with ID = '{instanceId}'.");
+
+            var res = starter.CreateCheckStatusResponse(req, instanceId);
+            log.Info($"starter: res {res}");
+
+            res.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(10));
+            return res;
+        }
+    }
+
     public static class ApprovalFlowController
     {
+        // 承認フローのステートを管理するOrchectrator関数
         [FunctionName("ApprovalFlowController")]
         public static async Task Run(
             [OrchestrationTrigger] DurableOrchestrationContext context, TraceWriter log)
@@ -27,19 +53,25 @@ namespace ApprovalFlow
             var input = context.GetInput<ApprovalRequest>();
             if (!context.IsReplaying) log.Info($"input: {input}");
             input.InstanceId = context.InstanceId;
-            await context.CallActivityAsync("RequestApproval", input);
+            // Activityを呼び出し承認者にメールを送信する
+            await context.CallActivityAsync("SendRequestApprovalMail", input);
 
+            // Orchestration Clientを起動してApprovalイベントを送信するためのURLがメールに書かれているので、
+            // そのイベントが送信を待機する
             bool approved = await context.WaitForExternalEvent<bool>("Approval");
             if (!context.IsReplaying) log.Info($"approved: {approved}");
 
+            // Mobile AppsのエンドポイントとなるURL
             var stampCardURL = ConfigurationManager.AppSettings.Get("StampCardURL");
             var client = new MobileServiceClient(stampCardURL);
             var calendarDateTable = client.GetTable<CalendarDate>();
             IEnumerable<CalendarDate> cDates = await calendarDateTable.ToEnumerableAsync();
+            // ほんとはクエリするときに絞りたかったが日付でうまく絞れなかったので泣く泣く...
             var update = cDates.Where(cDate => cDate.StampAt.Year == input.CalendarDate.Year &&
                 cDate.StampAt.Month == input.CalendarDate.Month && cDate.StampAt.Date == input.CalendarDate.Date).Single();
             log.Info($"update: {update}");
 
+            // メールクリック時のクエリパラメータに
             if (approved)
             {
                 update.Type = CalendarDate.Status.Approved;
@@ -54,12 +86,19 @@ namespace ApprovalFlow
             }
         }
 
-        [FunctionName("RequestApproval")]
+        // 承認者が承認・却下を決め、Orchectratorを再開させるためのURLが書かれたメールを送信するためのActivity関数
+        // Orchectratorがこの関数を呼び出す
+        [FunctionName("SendRequestApprovalMail")]
+        // SendGridKeyは
+        // ローカル環境: local.settings.json に設定
+        // 本番/ステージング環境: アプリケーション設定 に設定
         [return: SendGrid(ApiKey = "SendGridKey", From = "info@stampcard.com")]
         public static Mail RequestApproval([ActivityTrigger] ApprovalRequest approvalRequest, TraceWriter log)
         {
+            // Orchestratorを再開するためのOrchestration ClientのエンドポイントとなるURL
             var approveURL = ConfigurationManager.AppSettings.Get("APPROVE_URL");
 
+            // 承認者のメール。サンプルなので固定にしているが、承認者情報をDBに保存してそれを取得するべき
             var email = ConfigurationManager.AppSettings.Get("AUTHORIZER_EMAIL");
             var message = new Mail
             {
@@ -82,13 +121,17 @@ namespace ApprovalFlow
         }
     }
 
+    // Orchestratorからのリクエストをデシリアライズする
     public class ApprovalRequest
     {
+        // 何年何月何日のスタンプ日付か
         [JsonProperty(PropertyName = "calendarDate")]
         public DateTime CalendarDate { get; set; }
+        // Approvalイベントを待ち受けているOrchestratorを特定する
         public string InstanceId { get; set; }
     }
 
+    // スタンプの1日分。モバイルクライアントでもこのクラスを使用してスタンプデータを更新する
     public class CalendarDate
     {
         [JsonProperty(PropertyName = "id")]
@@ -106,9 +149,10 @@ namespace ApprovalFlow
         public DateTime StampAt { get; set; }
     }
 
-    public static class Approval
+    public static class ApprovalEventSender
     {
-        [FunctionName("Approval")]
+        // Approvalイベントを送信してOrchectratorを再開させるためのOrchestration Client
+        [FunctionName("ApprovalEventSender")]
         public static async Task<HttpResponseMessage> Run(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestMessage req,
         [OrchestrationClient] DurableOrchestrationClient client)
@@ -134,30 +178,6 @@ namespace ApprovalFlow
             {
                 return req.CreateResponse(HttpStatusCode.BadRequest, "スタンプリクエストの処理に失敗しました。時間をおいて再度お試しください。");
             }
-        }
-    }
-
-    public static class HttpStart
-    {
-        [FunctionName("HttpStart")]
-        public static async Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.Function, methods: "post", Route = "orchestrators/{functionName}")] HttpRequestMessage req,
-            [OrchestrationClient] DurableOrchestrationClient starter,
-            string functionName,
-            TraceWriter log)
-        {
-            log.Info($"starter: {req}");
-            dynamic eventData = await req.Content.ReadAsAsync<object>();
-            log.Info($"starter:  eventData {eventData}");
-            string instanceId = await starter.StartNewAsync(functionName, eventData);
-
-            log.Info($"Started orchestration with ID = '{instanceId}'.");
-
-            var res = starter.CreateCheckStatusResponse(req, instanceId);
-            log.Info($"starter: res {res}");
-
-            res.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(10));
-            return res;
         }
     }
 }
