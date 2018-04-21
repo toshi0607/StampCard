@@ -20,7 +20,7 @@ namespace ApprovalFlow
 {
     public static class HttpStart
     {
-        // ƒ‚ƒoƒCƒ‹ƒNƒ‰ƒCƒAƒ“ƒg‚©‚ç‚Ì³”FƒŠƒNƒGƒXƒg‚ğó‚¯AOrchestrator‚ğ‹N“®‚·‚é‚½‚ß‚ÌOrchestrationClientŠÖ”
+        // ãƒ¢ãƒã‚¤ãƒ«ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã‹ã‚‰ã®æ‰¿èªãƒªã‚¯ã‚¨ã‚¹ãƒˆã‚’å—ã‘ã€Orchestratorã‚’èµ·å‹•ã™ã‚‹ãŸã‚ã®OrchestrationClienté–¢æ•°
         [FunctionName("HttpStart")]
         public static async Task<HttpResponseMessage> Run(
             [HttpTrigger(AuthorizationLevel.Function, methods: "post", Route = "orchestrators/{functionName}")] HttpRequestMessage req,
@@ -45,7 +45,7 @@ namespace ApprovalFlow
 
     public static class ApprovalFlowController
     {
-        // ³”Fƒtƒ[‚ÌƒXƒe[ƒg‚ğŠÇ—‚·‚éOrchectratorŠÖ”
+        // æ‰¿èªãƒ•ãƒ­ãƒ¼ã®ã‚¹ãƒ†ãƒ¼ãƒˆã‚’ç®¡ç†ã™ã‚‹Orchectratoré–¢æ•°
         [FunctionName("ApprovalFlowController")]
         public static async Task Run(
             [OrchestrationTrigger] DurableOrchestrationContext context, TraceWriter log)
@@ -53,25 +53,29 @@ namespace ApprovalFlow
             var input = context.GetInput<ApprovalRequest>();
             if (!context.IsReplaying) log.Info($"input: {input}");
             input.InstanceId = context.InstanceId;
-            // Activity‚ğŒÄ‚Ño‚µ³”FÒ‚Éƒ[ƒ‹‚ğ‘—M‚·‚é
+            // Activityã‚’å‘¼ã³å‡ºã—æ‰¿èªè€…ã«ãƒ¡ãƒ¼ãƒ«ã‚’é€ä¿¡ã™ã‚‹
             await context.CallActivityAsync("SendRequestApprovalMail", input);
 
-            // Orchestration Client‚ğ‹N“®‚µ‚ÄApprovalƒCƒxƒ“ƒg‚ğ‘—M‚·‚é‚½‚ß‚ÌURL‚ªƒ[ƒ‹‚É‘‚©‚ê‚Ä‚¢‚é‚Ì‚ÅA
-            // ‚»‚ÌƒCƒxƒ“ƒg‚ª‘—M‚ğ‘Ò‹@‚·‚é
+            // Orchestration Clientã‚’èµ·å‹•ã—ã¦Approvalã‚¤ãƒ™ãƒ³ãƒˆã‚’é€ä¿¡ã™ã‚‹ãŸã‚ã®URLãŒãƒ¡ãƒ¼ãƒ«ã«æ›¸ã‹ã‚Œã¦ã„ã‚‹ã®ã§ã€
+            // ãã®ã‚¤ãƒ™ãƒ³ãƒˆãŒé€ä¿¡ã‚’å¾…æ©Ÿã™ã‚‹ã€‚
+            // ãŸã ã€Approvalã‚¤ãƒ™ãƒ³ãƒˆã ã‘å¾…ã¤ã¨ãƒ¡ãƒ¼ãƒ«é€ä¿¡å¤±æ•—æ™‚ã«å¤–éƒ¨ã‹ã‚‰æ›´æ–°ã§ããªããªã£ã¦ã—ã¾ã†ã®ã§ã€
+            // ã‚¿ã‚¤ãƒãƒ¼ã§ã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã‚’è¨­å®šã—ã¦ã€ã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã™ã‚‹ã¨ãã«Reviewingã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚’ä½•ã‚‚ãªã„ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã«å¤‰æ›´ã—ã¦
+            // ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã‹ã‚‰å†åº¦æ‰¿èªãƒªã‚¯ã‚¨ã‚¹ãƒˆã§ãã‚‹ã‚ˆã†ã«ã—ãŸæ–¹ãŒã†ã‚ˆã•ãã†ã€‚
+            // ï¼ˆå¤–éƒ¨ã‚¤ãƒ™ãƒ³ãƒˆã¨ã‚¿ã‚¤ãƒ ã‚¢ã‚¦ãƒˆã®å…ˆå‹ã¡ã§å‡¦ç†ã‚’é€²ã‚ã‚‹ï¼‰
             bool approved = await context.WaitForExternalEvent<bool>("Approval");
             if (!context.IsReplaying) log.Info($"approved: {approved}");
 
-            // Mobile Apps‚ÌƒGƒ“ƒhƒ|ƒCƒ“ƒg‚Æ‚È‚éURL
+            // Mobile Appsã®ã‚¨ãƒ³ãƒ‰ãƒã‚¤ãƒ³ãƒˆã¨ãªã‚‹URL
             var stampCardURL = ConfigurationManager.AppSettings.Get("StampCardURL");
             var client = new MobileServiceClient(stampCardURL);
             var calendarDateTable = client.GetTable<CalendarDate>();
             IEnumerable<CalendarDate> cDates = await calendarDateTable.ToEnumerableAsync();
-            // ‚Ù‚ñ‚Æ‚ÍƒNƒGƒŠ‚·‚é‚Æ‚«‚Éi‚è‚½‚©‚Á‚½‚ª“ú•t‚Å‚¤‚Ü‚­i‚ê‚È‚©‚Á‚½‚Ì‚Å‹ƒ‚­‹ƒ‚­...
+            // ã»ã‚“ã¨ã¯ã‚¯ã‚¨ãƒªã™ã‚‹ã¨ãã«çµã‚ŠãŸã‹ã£ãŸãŒæ—¥ä»˜ã§ã†ã¾ãçµã‚Œãªã‹ã£ãŸã®ã§æ³£ãæ³£ã...
             var update = cDates.Where(cDate => cDate.StampAt.Year == input.CalendarDate.Year &&
                 cDate.StampAt.Month == input.CalendarDate.Month && cDate.StampAt.Date == input.CalendarDate.Date).Single();
             log.Info($"update: {update}");
 
-            // ƒ[ƒ‹ƒNƒŠƒbƒN‚ÌƒNƒGƒŠƒpƒ‰ƒ[ƒ^‚É
+            // ãƒ¡ãƒ¼ãƒ«ã‚¯ãƒªãƒƒã‚¯æ™‚ã®ã‚¯ã‚¨ãƒªãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã«
             if (approved)
             {
                 update.Type = CalendarDate.Status.Approved;
@@ -86,31 +90,31 @@ namespace ApprovalFlow
             }
         }
 
-        // ³”FÒ‚ª³”FE‹p‰º‚ğŒˆ‚ßAOrchectrator‚ğÄŠJ‚³‚¹‚é‚½‚ß‚ÌURL‚ª‘‚©‚ê‚½ƒ[ƒ‹‚ğ‘—M‚·‚é‚½‚ß‚ÌActivityŠÖ”
-        // Orchectrator‚ª‚±‚ÌŠÖ”‚ğŒÄ‚Ño‚·
+        // æ‰¿èªè€…ãŒæ‰¿èªãƒ»å´ä¸‹ã‚’æ±ºã‚ã€Orchectratorã‚’å†é–‹ã•ã›ã‚‹ãŸã‚ã®URLãŒæ›¸ã‹ã‚ŒãŸãƒ¡ãƒ¼ãƒ«ã‚’é€ä¿¡ã™ã‚‹ãŸã‚ã®Activityé–¢æ•°
+        // OrchectratorãŒã“ã®é–¢æ•°ã‚’å‘¼ã³å‡ºã™
         [FunctionName("SendRequestApprovalMail")]
-        // SendGridKey‚Í
-        // ƒ[ƒJƒ‹ŠÂ‹«: local.settings.json ‚Éİ’è
-        // –{”Ô/ƒXƒe[ƒWƒ“ƒOŠÂ‹«: ƒAƒvƒŠƒP[ƒVƒ‡ƒ“İ’è ‚Éİ’è
+        // SendGridKeyã¯
+        // ãƒ­ãƒ¼ã‚«ãƒ«ç’°å¢ƒ: local.settings.json ã«è¨­å®š
+        // æœ¬ç•ª/ã‚¹ãƒ†ãƒ¼ã‚¸ãƒ³ã‚°ç’°å¢ƒ: ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³è¨­å®š ã«è¨­å®š
         [return: SendGrid(ApiKey = "SendGridKey", From = "info@stampcard.com")]
         public static Mail RequestApproval([ActivityTrigger] ApprovalRequest approvalRequest, TraceWriter log)
         {
-            // Orchestrator‚ğÄŠJ‚·‚é‚½‚ß‚ÌOrchestration Client‚ÌƒGƒ“ƒhƒ|ƒCƒ“ƒg‚Æ‚È‚éURL
+            // Orchestratorã‚’å†é–‹ã™ã‚‹ãŸã‚ã®Orchestration Clientã®ã‚¨ãƒ³ãƒ‰ãƒã‚¤ãƒ³ãƒˆã¨ãªã‚‹URL
             var approveURL = ConfigurationManager.AppSettings.Get("APPROVE_URL");
 
-            // ³”FÒ‚Ìƒ[ƒ‹BƒTƒ“ƒvƒ‹‚È‚Ì‚ÅŒÅ’è‚É‚µ‚Ä‚¢‚é‚ªA³”FÒî•ñ‚ğDB‚É•Û‘¶‚µ‚Ä‚»‚ê‚ğæ“¾‚·‚é‚×‚«
+            // æ‰¿èªè€…ã®ãƒ¡ãƒ¼ãƒ«ã€‚ã‚µãƒ³ãƒ—ãƒ«ãªã®ã§å›ºå®šã«ã—ã¦ã„ã‚‹ãŒã€æ‰¿èªè€…æƒ…å ±ã‚’DBã«ä¿å­˜ã—ã¦ãã‚Œã‚’å–å¾—ã™ã‚‹ã¹ã
             var email = ConfigurationManager.AppSettings.Get("APPROVER_EMAIL");
             var message = new Mail
             {
-                Subject = $"{approvalRequest.CalendarDate.ToString("yyyy/MM/dd")}‚ÌƒXƒ^ƒ“ƒvƒŠƒNƒGƒXƒg"
+                Subject = $"{approvalRequest.CalendarDate.ToString("yyyy/MM/dd")}ã®ã‚¹ã‚¿ãƒ³ãƒ—ãƒªã‚¯ã‚¨ã‚¹ãƒˆ"
             };
 
             Content content = new Content
             {
                 Type = "text/plain",
-                Value = "³”F‚·‚é‚É‚Í‚Â‚¬‚ÌURL‚ğƒNƒŠƒbƒN‚µ‚Ä‚­‚¾‚³‚¢B\n\n" +
+                Value = "æ‰¿èªã™ã‚‹ã«ã¯ã¤ãã®URLã‚’ã‚¯ãƒªãƒƒã‚¯ã—ã¦ãã ã•ã„ã€‚\n\n" +
                     $"{approveURL}&isApproved=true&instanceId={approvalRequest.InstanceId}\n\n\n" +
-                    "‹p‰º‚·‚é‚É‚Í‚Â‚¬‚ÌURL‚ğƒNƒŠƒbƒN‚µ‚Ä‚­‚¾‚³‚¢B\n\n" +
+                    "å´ä¸‹ã™ã‚‹ã«ã¯ã¤ãã®URLã‚’ã‚¯ãƒªãƒƒã‚¯ã—ã¦ãã ã•ã„ã€‚\n\n" +
                     $"{approveURL}&isApproved=false&instanceId={approvalRequest.InstanceId}"
             };
             message.AddContent(content);
@@ -121,17 +125,17 @@ namespace ApprovalFlow
         }
     }
 
-    // Orchestrator‚©‚ç‚ÌƒŠƒNƒGƒXƒg‚ğƒfƒVƒŠƒAƒ‰ƒCƒY‚·‚é
+    // Orchestratorã‹ã‚‰ã®ãƒªã‚¯ã‚¨ã‚¹ãƒˆã‚’ãƒ‡ã‚·ãƒªã‚¢ãƒ©ã‚¤ã‚ºã™ã‚‹
     public class ApprovalRequest
     {
-        // ‰½”N‰½Œ‰½“ú‚ÌƒXƒ^ƒ“ƒv“ú•t‚©
+        // ä½•å¹´ä½•æœˆä½•æ—¥ã®ã‚¹ã‚¿ãƒ³ãƒ—æ—¥ä»˜ã‹
         [JsonProperty(PropertyName = "calendarDate")]
         public DateTime CalendarDate { get; set; }
-        // ApprovalƒCƒxƒ“ƒg‚ğ‘Ò‚¿ó‚¯‚Ä‚¢‚éOrchestrator‚ğ“Á’è‚·‚é
+        // Approvalã‚¤ãƒ™ãƒ³ãƒˆã‚’å¾…ã¡å—ã‘ã¦ã„ã‚‹Orchestratorã‚’ç‰¹å®šã™ã‚‹
         public string InstanceId { get; set; }
     }
 
-    // ƒXƒ^ƒ“ƒv‚Ì1“ú•ªBƒ‚ƒoƒCƒ‹ƒNƒ‰ƒCƒAƒ“ƒg‚Å‚à‚±‚ÌƒNƒ‰ƒX‚ğg—p‚µ‚ÄƒXƒ^ƒ“ƒvƒf[ƒ^‚ğXV‚·‚é
+    // ã‚¹ã‚¿ãƒ³ãƒ—ã®1æ—¥åˆ†ã€‚ãƒ¢ãƒã‚¤ãƒ«ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã§ã‚‚ã“ã®ã‚¯ãƒ©ã‚¹ã‚’ä½¿ç”¨ã—ã¦ã‚¹ã‚¿ãƒ³ãƒ—ãƒ‡ãƒ¼ã‚¿ã‚’æ›´æ–°ã™ã‚‹
     public class CalendarDate
     {
         [JsonProperty(PropertyName = "id")]
@@ -151,7 +155,7 @@ namespace ApprovalFlow
 
     public static class ApprovalEventSender
     {
-        // ApprovalƒCƒxƒ“ƒg‚ğ‘—M‚µ‚ÄOrchectrator‚ğÄŠJ‚³‚¹‚é‚½‚ß‚ÌOrchestration Client
+        // Approvalã‚¤ãƒ™ãƒ³ãƒˆã‚’é€ä¿¡ã—ã¦Orchectratorã‚’å†é–‹ã•ã›ã‚‹ãŸã‚ã®Orchestration Client
         [FunctionName("ApprovalEventSender")]
         public static async Task<HttpResponseMessage> Run(
         [HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequestMessage req,
@@ -167,16 +171,16 @@ namespace ApprovalFlow
                 .FirstOrDefault(q => string.Compare(q.Key, "isApproved", true) == 0)
                 .Value;
 
-            var result = (isApproved == "true") ? "³”F" : "‹p‰º";
+            var result = (isApproved == "true") ? "æ‰¿èª" : "å´ä¸‹";
 
             try
             {
                 await client.RaiseEventAsync(instanceId, "Approval", isApproved);
-                return req.CreateResponse(HttpStatusCode.OK, $"ƒXƒ^ƒ“ƒvƒŠƒNƒGƒXƒg‚ğ{result}‚µ‚Ü‚µ‚½B");
+                return req.CreateResponse(HttpStatusCode.OK, $"ã‚¹ã‚¿ãƒ³ãƒ—ãƒªã‚¯ã‚¨ã‚¹ãƒˆã‚’{result}ã—ã¾ã—ãŸã€‚");
             }
             catch
             {
-                return req.CreateResponse(HttpStatusCode.BadRequest, "ƒXƒ^ƒ“ƒvƒŠƒNƒGƒXƒg‚Ìˆ—‚É¸”s‚µ‚Ü‚µ‚½BŠÔ‚ğ‚¨‚¢‚ÄÄ“x‚¨‚µ‚­‚¾‚³‚¢B");
+                return req.CreateResponse(HttpStatusCode.BadRequest, "ã‚¹ã‚¿ãƒ³ãƒ—ãƒªã‚¯ã‚¨ã‚¹ãƒˆã®å‡¦ç†ã«å¤±æ•—ã—ã¾ã—ãŸã€‚æ™‚é–“ã‚’ãŠã„ã¦å†åº¦ãŠè©¦ã—ãã ã•ã„ã€‚");
             }
         }
     }
